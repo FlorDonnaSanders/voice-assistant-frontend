@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 const API_KEY = process.env.LIVEKIT_API_KEY;
 const API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const PHONE_NUMBER = process.env.PHONE_NUMBER;
 
 export type ConnectionDetails = {
   serverUrl: string;
@@ -30,11 +31,13 @@ export async function GET() {
     }
 
     // Generate participant token
-    const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
-    const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
+    const participantIdentity = `Phone ${PHONE_NUMBER}`;
+    const roomName = `voice_assistant_room_${Math.floor(
+      Math.random() * 10_000
+    )}`;
     const participantToken = await createParticipantToken(
       { identity: participantIdentity },
-      roomName,
+      roomName
     );
 
     // Return connection details
