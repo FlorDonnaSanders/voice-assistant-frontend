@@ -1,3 +1,4 @@
+import { RoomAgentDispatch, RoomConfiguration } from "@livekit/protocol";
 import { AccessToken, AccessTokenOptions, VideoGrant } from "livekit-server-sdk";
 import { NextResponse } from "next/server";
 
@@ -5,6 +6,8 @@ import { NextResponse } from "next/server";
 const API_KEY = process.env.LIVEKIT_API_KEY;
 const API_SECRET = process.env.LIVEKIT_API_SECRET;
 const LIVEKIT_URL = process.env.LIVEKIT_URL;
+const PHONE_NUMBER = process.env.PHONE_NUMBER;
+const AGENT = process.env.AGENT;
 
 // don't cache the results
 export const revalidate = 0;
@@ -29,7 +32,7 @@ export async function GET() {
     }
 
     // Generate participant token
-    const participantIdentity = `voice_assistant_user_${Math.floor(Math.random() * 10_000)}`;
+    const participantIdentity = `${PHONE_NUMBER}`;
     const roomName = `voice_assistant_room_${Math.floor(Math.random() * 10_000)}`;
     const participantToken = await createParticipantToken(
       { identity: participantIdentity },
@@ -68,5 +71,18 @@ function createParticipantToken(userInfo: AccessTokenOptions, roomName: string) 
     canSubscribe: true,
   };
   at.addGrant(grant);
+
+  // Explicit agent dispatch
+  if (AGENT) {
+    at.roomConfig = new RoomConfiguration({
+      agents: [
+        new RoomAgentDispatch({
+          agentName: AGENT,
+          metadata: JSON.stringify({}),
+        }),
+      ],
+    });
+  }
+
   return at.toJwt();
 }
