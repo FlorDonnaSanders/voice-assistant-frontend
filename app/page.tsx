@@ -17,6 +17,25 @@ import { Room, RoomEvent } from "livekit-client";
 import { useCallback, useEffect, useState } from "react";
 import type { ConnectionDetails } from "./api/connection-details/route";
 
+// Define the list of available agents
+const agents = [
+  {
+    label: "Donna",
+    value: "livekit",
+    showUnifiedEventId: true,
+  },
+  {
+    label: "Pre-Meeting Briefing",
+    value: "pre-meeting-briefing",
+    showUnifiedEventId: true,
+  },
+  {
+    label: "Demo Donna",
+    value: "livekit-demo",
+    showUnifiedEventId: false,
+  },
+];
+
 export default function Page() {
   const [room] = useState(new Room());
 
@@ -30,10 +49,23 @@ export default function Page() {
     // In real-world application, you would likely allow the user to specify their
     // own participant name, and possibly to choose from existing rooms to join.
 
+    // Fetch connection details including the selected agent and unified event ID
+    const selectedAgentValue = (document.getElementById("agent-select") as HTMLSelectElement)
+      ?.value;
+    const unifiedEventId = (document.getElementById("unified-event-id-input") as HTMLInputElement)
+      ?.value;
+
     const url = new URL(
       process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ?? "/api/connection-details",
       window.location.origin
     );
+
+    // Add selected agent and unified event ID as query parameters
+    url.searchParams.append("agentName", selectedAgentValue);
+    if (unifiedEventId) {
+      url.searchParams.append("unifiedEventId", unifiedEventId);
+    }
+
     const response = await fetch(url.toString());
     const connectionDetailsData: ConnectionDetails = await response.json();
 
@@ -53,15 +85,22 @@ export default function Page() {
     <main data-lk-theme="default" className="h-full grid content-center bg-[var(--lk-bg)]">
       <RoomContext.Provider value={room}>
         <div className="lk-room-container max-w-[1024px] w-[90vw] mx-auto max-h-[90vh]">
-          <SimpleVoiceAssistant onConnectButtonClicked={onConnectButtonClicked} />
+          <SimpleVoiceAssistant onConnectButtonClicked={onConnectButtonClicked} agents={agents} />
         </div>
       </RoomContext.Provider>
     </main>
   );
 }
 
-function SimpleVoiceAssistant(props: { onConnectButtonClicked: () => void }) {
+function SimpleVoiceAssistant(props: {
+  onConnectButtonClicked: () => void;
+  agents: typeof agents;
+}) {
   const { state: agentState } = useVoiceAssistant();
+  const [selectedAgentValue, setSelectedAgentValue] = useState(props.agents[0].value);
+  const [unifiedEventId, setUnifiedEventId] = useState("");
+
+  const selectedAgent = props.agents.find((agent) => agent.value === selectedAgentValue);
 
   return (
     <>
@@ -73,13 +112,48 @@ function SimpleVoiceAssistant(props: { onConnectButtonClicked: () => void }) {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.3, ease: [0.09, 1.04, 0.245, 1.055] }}
-            className="grid items-center justify-center h-full"
+            className="grid items-center justify-center h-full gap-4"
           >
+            {/* Agent Selection Dropdown */}
+            <div className="flex flex-col items-center">
+              <label htmlFor="agent-select" className="text-white mb-2">
+                Select Agent:
+              </label>
+              <select
+                id="agent-select"
+                value={selectedAgentValue}
+                onChange={(e) => setSelectedAgentValue(e.target.value)}
+                className="px-4 py-2 bg-white text-black rounded-md cursor-pointer"
+              >
+                {props.agents.map((agent) => (
+                  <option key={agent.value} value={agent.value}>
+                    {agent.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Unified Event ID Input (Conditional) */}
+            {selectedAgent?.showUnifiedEventId && (
+              <div className="flex flex-col items-center">
+                <label htmlFor="unified-event-id-input" className="text-white mb-2">
+                  Unified Event ID (Optional):
+                </label>
+                <input
+                  id="unified-event-id-input"
+                  type="text"
+                  value={unifiedEventId}
+                  onChange={(e) => setUnifiedEventId(e.target.value)}
+                  className="px-4 py-2 bg-white text-black rounded-md"
+                />
+              </div>
+            )}
+
             <motion.button
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3, delay: 0.1 }}
-              className="uppercase px-4 py-2 bg-white text-black rounded-md"
+              className="uppercase px-4 py-2 bg-white text-black rounded-md mt-4"
               onClick={() => props.onConnectButtonClicked()}
             >
               Start a conversation
